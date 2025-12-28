@@ -1,0 +1,7 @@
+{
+  "name": "SnapSell AI",
+  "description": "Transform raw product photos into professional, SEO-optimized e-commerce listings. Enhance visuals while maintaining authenticity and generate high-converting descriptions instantly.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
