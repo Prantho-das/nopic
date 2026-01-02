@@ -2,7 +2,10 @@
 export type BackgroundStyle = 
   | 'studio' | 'marble' | 'wood' | 'nature' | 'home' 
   | 'luxury' | 'tech' | 'urban' | 'baby' | 'tool' 
-  | 'summer' | 'office';
+  | 'summer' | 'office' | 'cozy' | 'cyberpunk' | 'minimalist' 
+  | 'autumn' | 'vintage' | 'popart' | 'dark_moody' | 'neon';
+
+export type BrandVoice = 'professional' | 'luxury' | 'playful' | 'minimalist' | 'urgent';
 
 export interface ProductListing {
   titleEN: string;
@@ -11,9 +14,19 @@ export interface ProductListing {
   descriptionBN: string;
   featuresEN: string[];
   featuresBN: string[];
+  salesHookEN: string;
+  salesHookBN: string;
+  ctaEN: string;
+  ctaBN: string;
   seoKeywordsEN: string[];
   seoKeywordsBN: string[];
   suggestedPrice?: string;
+  jsonLd: string;
+  marketplaces: {
+    amazon: string;
+    shopify: string;
+    etsy: string;
+  };
 }
 
 export interface ProcessingStatus {
