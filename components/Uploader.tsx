@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { BackgroundStyle, BrandVoice } from '../types';
 
 interface UploaderProps {
@@ -13,6 +13,7 @@ const Uploader: React.FC<UploaderProps> = ({ onUpload, isLoading, t }) => {
   const [selectedStyles, setSelectedStyles] = useState<BackgroundStyle[]>(['studio']);
   const [selectedVoice, setSelectedVoice] = useState<BrandVoice>('professional');
   const [brandName, setBrandName] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   const styles: { id: BackgroundStyle; label: string; icon: string }[] = [
     { id: 'studio', label: 'Studio', icon: 'fa-camera-retro' },
@@ -45,6 +46,52 @@ const Uploader: React.FC<UploaderProps> = ({ onUpload, isLoading, t }) => {
     { id: 'urgent', label: 'Urgent' },
   ];
 
+  const processFile = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    onUpload(file, selectedStyles, brandName, selectedVoice);
+  }, [onUpload, selectedStyles, brandName, selectedVoice]);
+
+  const onFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!isLoading) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (isLoading) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  };
+
+  // Clipboard Paste Support
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (isLoading) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) processFile(file);
+          break;
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isLoading, processFile]);
+
   const toggleStyle = (styleId: BackgroundStyle) => {
     if (selectedStyles.includes(styleId)) {
       if (selectedStyles.length > 1) {
@@ -57,28 +104,22 @@ const Uploader: React.FC<UploaderProps> = ({ onUpload, isLoading, t }) => {
     }
   };
 
-  const onFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onUpload(file, selectedStyles, brandName || 'My Store', selectedVoice);
-    }
-  };
-
   return (
     <div className="w-full max-w-5xl mx-auto p-4 space-y-10">
       <div className="text-center space-y-2 py-4">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">SNAPSELL PRO STUDIO</h1>
-        <p className="text-slate-500 text-sm max-w-lg mx-auto">Transform one photo into a complete professional multi-atmosphere product catalog.</p>
+        <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">SnapSell Pro Studio</h1>
+        <p className="text-slate-500 text-sm max-w-lg mx-auto">Upload once, get a high-converting catalog instantly.</p>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 space-y-6">
           <section className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-6">
             <div>
-              <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3 block">1. Brand Identity</label>
+              <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1 block">1. Brand Identity</label>
+              <p className="text-[8px] text-slate-400 mb-2 uppercase font-bold">(Acts as Watermark if filled)</p>
               <input 
                 type="text" 
-                placeholder="Brand Name" 
+                placeholder="Brand Name / Shop Name" 
                 value={brandName}
                 onChange={e => setBrandName(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500/20"
@@ -122,26 +163,37 @@ const Uploader: React.FC<UploaderProps> = ({ onUpload, isLoading, t }) => {
         <div className="lg:col-span-2">
           <div 
             onClick={() => !isLoading && fileInputRef.current?.click()}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             className={`h-full min-h-[450px] relative border-4 border-dashed rounded-[3rem] p-12 text-center transition-all cursor-pointer group flex flex-col items-center justify-center
-              ${isLoading ? 'border-indigo-200 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-500 hover:bg-white bg-slate-50/30'}
+              ${isLoading ? 'border-indigo-200 bg-indigo-50/50' : isDragging ? 'border-indigo-600 bg-indigo-50 scale-[1.02]' : 'border-slate-200 hover:border-indigo-500 hover:bg-white bg-slate-50/30'}
             `}
           >
             <input type="file" ref={fileInputRef} onChange={onFileSelected} accept="image/*" className="hidden" />
             
-            <div className="w-24 h-24 bg-indigo-600 text-white rounded-[2rem] flex items-center justify-center mb-6 shadow-2xl shadow-indigo-200 group-hover:rotate-6 transition-transform">
-              <i className="fa-solid fa-camera text-3xl"></i>
+            <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center mb-6 shadow-2xl transition-all ${isDragging ? 'bg-indigo-700 scale-110' : 'bg-indigo-600 text-white shadow-indigo-200 group-hover:rotate-6'}`}>
+              <i className={`fa-solid ${isDragging ? 'fa-cloud-arrow-down' : 'fa-camera'} text-3xl`}></i>
             </div>
             
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight">{t.uploadBtn}</h3>
-            <p className="text-slate-500 mt-2 font-medium">Auto-enhancement & Localized SEO Processing</p>
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+              {isDragging ? 'Drop Image Here' : t.uploadBtn}
+            </h3>
+            <p className="text-slate-500 mt-2 font-medium">
+              {isDragging ? 'Release to upload' : 'Click or Drag to Start Transformation'}
+            </p>
 
             {isLoading && (
               <div className="absolute inset-0 bg-white/95 backdrop-blur-md rounded-[3rem] flex items-center justify-center z-20">
                 <div className="flex flex-col items-center gap-4">
                   <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                  <div className="text-center">
-                    <p className="text-xs font-black text-indigo-600 uppercase tracking-widest animate-pulse">Generating {selectedStyles.length} Visual Versions...</p>
-                    <p className="text-[9px] text-slate-400 uppercase mt-2 font-black tracking-widest">Optimizing for Bangladesh Market...</p>
+                  <div className="text-center px-8">
+                    <p className="text-xs font-black text-indigo-600 uppercase tracking-widest animate-pulse">
+                      Generating {selectedStyles.length} Visual Versions...
+                    </p>
+                    <p className="text-[9px] text-slate-400 uppercase mt-2 font-black tracking-widest">
+                      Optimizing for e-commerce...
+                    </p>
                   </div>
                 </div>
               </div>

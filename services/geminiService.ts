@@ -27,32 +27,51 @@ const STYLE_PROMPTS: Record<BackgroundStyle, string> = {
 
 export const enhanceProductImage = async (base64Data: string, mimeType: string, style: BackgroundStyle, watermark?: string): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  const watermarkInstruction = watermark 
+  const watermarkInstruction = (watermark && watermark.trim())
     ? `IMPORTANT: Add a subtle, professional text watermark that says "${watermark}" in a clean white sans-serif font, 20% opacity, bottom-right corner.` 
-    : "";
+    : "STRICT RULE: Do NOT add any text, watermarks, logos, or overlay graphics to the image. Keep it a clean product shot.";
 
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
     contents: {
       parts: [
         { inlineData: { data: base64Data, mimeType: mimeType } },
-        { text: `TASK: Photorealistic E-commerce Enhancement. 
-          STYLING: ${STYLE_PROMPTS[style]} 
-          STRICT RULES: 
-          1. Keep the product's original shape, brand labels, and colors 100% accurate. 
-          2. The result must be a clean, high-fidelity commercial image.
-          3. Ensure zero AI artifacts; textures must be sharp and organic.
-          ${watermarkInstruction}` }
+        { text: `TASK: Photorealistic E-commerce Enhancement. STYLING: ${STYLE_PROMPTS[style]} STRICT RULES: 1. Keep the product's original shape, brand labels, and colors 100% accurate. 2. The result must be a clean, high-fidelity commercial image. 3. Ensure zero AI artifacts. ${watermarkInstruction}` }
       ],
     },
-    config: {
-      imageConfig: { aspectRatio: "1:1" }
-    }
+    config: { imageConfig: { aspectRatio: "1:1" } }
   });
 
   const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
   if (!part?.inlineData) throw new Error('Image generation failed');
+  return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+};
+
+export const refineProductImage = async (
+  base64Data: string, 
+  mimeType: string, 
+  style: string, 
+  refinementPrompt: string,
+  watermark?: string
+): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const watermarkInstruction = (watermark && watermark.trim())
+    ? `Apply a watermark text: "${watermark}".` 
+    : "STRICT: DO NOT add any text or watermark.";
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [
+        { inlineData: { data: base64Data, mimeType: mimeType } },
+        { text: `TASK: Refine this product photo based on user feedback. BASE STYLE: ${style} USER REQUEST: ${refinementPrompt} STRICT RULES: 1. Maintain product integrity. 2. Follow the user's specific request. 3. High quality commercial finish. ${watermarkInstruction}` }
+      ],
+    },
+    config: { imageConfig: { aspectRatio: "1:1" } }
+  });
+
+  const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+  if (!part?.inlineData) throw new Error('Refinement failed');
   return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
 };
 
@@ -68,20 +87,7 @@ export const generateProductCopy = async (
     contents: {
       parts: [
         { inlineData: { data: base64Data, mimeType: mimeType } },
-        { text: `Generate a high-converting, sales-driven e-commerce listing for the brand "${brandName}" using a ${voice} voice. 
-        
-        CONTENT & SEO REQUIREMENTS:
-        1. Sales Focus: Create a powerful "Sales Hook" (catchy first line) and a "Call to Action" (CTA).
-        2. Multi-lingual support: Professional English and standard, natural-sounding Bangla.
-        3. Bangla SEO Deep Dive: Generate 10-15 localized Bangla keywords that people in Bangladesh actually use on Facebook Marketplace, Daraz, and Bikroy. Include common variations and phonetic spellings if applicable.
-        4. Marketplaces:
-           - Amazon: 5 bullet points.
-           - Shopify: Compelling story.
-           - Etsy: Craftsmanship focus.
-        5. SEO: Generate a JSON-LD script for Product schema.
-        
-        FORMAT:
-        Return a JSON object matching the ProductListing interface.` }
+        { text: `Generate a high-converting, sales-driven e-commerce listing for the brand "${brandName}" using a ${voice} voice. Return as JSON.` }
       ]
     },
     config: {
@@ -108,7 +114,8 @@ export const generateProductCopy = async (
             properties: {
               amazon: { type: Type.STRING },
               shopify: { type: Type.STRING },
-              etsy: { type: Type.STRING }
+              etsy: { type: Type.STRING },
+              facebook: { type: Type.STRING }
             }
           }
         },

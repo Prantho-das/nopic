@@ -12,12 +12,12 @@ export interface ProductListing {
   titleBN: string;
   descriptionEN: string;
   descriptionBN: string;
-  featuresEN: string[];
-  featuresBN: string[];
   salesHookEN: string;
   salesHookBN: string;
   ctaEN: string;
   ctaBN: string;
+  featuresEN: string[];
+  featuresBN: string[];
   seoKeywordsEN: string[];
   seoKeywordsBN: string[];
   suggestedPrice?: string;
@@ -26,6 +26,7 @@ export interface ProductListing {
     amazon: string;
     shopify: string;
     etsy: string;
+    facebook: string;
   };
 }
 
